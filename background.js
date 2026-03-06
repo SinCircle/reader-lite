@@ -15,7 +15,16 @@ chrome.action.onClicked.addListener(async (tab) => {
     const response = await sendToTab(tabId, { action: 'toggleReaderMode' });
     setBadge(tabId, Boolean(response?.enabled));
   } catch (_error) {
-    setBadge(tabId, false);
+    // Content script not injected (e.g. page opened before extension install/update)
+    // Programmatically inject and retry
+    try {
+      await chrome.scripting.insertCSS({ target: { tabId }, files: ['content.css'] });
+      await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+      const response = await sendToTab(tabId, { action: 'toggleReaderMode' });
+      setBadge(tabId, Boolean(response?.enabled));
+    } catch (_retryError) {
+      setBadge(tabId, false);
+    }
   }
 });
 

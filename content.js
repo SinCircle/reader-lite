@@ -7,31 +7,24 @@
   'use strict';
 
   /* =====================
-     配置持久化
+     默认配置
      ===================== */
-  const RL_STORAGE_KEY = 'readerLiteSettings';
   const RL_DEFAULTS = {
     fontSize: 19, lineHeight: '1.9', width: '920px',
     position: '0 auto', imgScale: 100, imgHidden: false
   };
-  function rlLoadSettings() {
-    return new Promise(resolve => {
-      chrome.storage.local.get(RL_STORAGE_KEY, r => {
-        resolve({ ...RL_DEFAULTS, ...(r[RL_STORAGE_KEY] || {}) });
-      });
-    });
-  }
-  function rlSaveSettings(s) {
-    chrome.storage.local.set({ [RL_STORAGE_KEY]: s });
-  }
 
   /* =====================
      消息监听
      ===================== */
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg.action === 'toggleReaderMode') {
-      toggleReaderMode().then(enabled => sendResponse({ enabled }));
-      return true;
+      try {
+        const enabled = toggleReaderMode();
+        sendResponse({ enabled });
+      } catch (_e) {
+        sendResponse({ enabled: false });
+      }
     } else if (msg.action === 'getReaderModeState') {
       sendResponse({ enabled: !!window.__readerLiteState });
     }
@@ -40,7 +33,7 @@
   /* =====================
      切换
      ===================== */
-  async function toggleReaderMode() {
+  function toggleReaderMode() {
     if (window.__readerLiteState) {
       restorePage();
       return false;
@@ -150,9 +143,11 @@
   /* =====================
      进入阅读模式
      ===================== */
-  async function enterReaderMode() {
+  function enterReaderMode() {
     const mainEl = pickMainContent();
     if (!mainEl) return false;
+
+    const settings = { ...RL_DEFAULTS };
 
     const title = extractTitle(mainEl);
     const cloned = mainEl.cloneNode(true);
@@ -162,16 +157,30 @@
     const savedBodyClass = document.body.className;
     const savedBodyStyle = document.body.getAttribute('style') || '';
 
-    // 禁用原始样式表（保留 PageNote 和字体）
+    // 禁用原始样式表（保留 PageNote、字体和扩展自身样式）
     const disabledSheets = [];
     document.querySelectorAll('link[rel="stylesheet"], style').forEach((el) => {
       if (el.id === 'pagenote-inpage-style') return;
+      if (el.id === 'reader-lite-injected-css') return;
       if (el.href && el.href.includes('fonts.googleapis.com')) return;
+      if (el.href && el.href.startsWith('chrome-extension://')) return;
+      // 跳过扩展自身的 content script CSS（Chrome 注入的 <style>）
+      if (el.tagName === 'STYLE' && el.textContent &&
+          el.textContent.includes('.reader-lite-body')) return;
       if (!el.disabled) {
         el.disabled = true;
         disabledSheets.push(el);
       }
     });
+
+    // 确保阅读模式 CSS 始终可用（防止被上面的逻辑误禁用）
+    if (!document.getElementById('reader-lite-injected-css')) {
+      const rlCSS = document.createElement('link');
+      rlCSS.id = 'reader-lite-injected-css';
+      rlCSS.rel = 'stylesheet';
+      rlCSS.href = chrome.runtime.getURL('content.css');
+      document.head.appendChild(rlCSS);
+    }
 
     // 把原始 body 子节点移入隐藏容器（保留 DOM 引用，不丢失 notes）
     const stash = document.createElement('div');
@@ -203,7 +212,6 @@
     }
     container.appendChild(contentEl);
 
-    const settings = await rlLoadSettings();
     const toolbar = buildToolbar(container, contentEl, settings);
 
     document.body.appendChild(toolbar);
@@ -252,8 +260,6 @@
     }
     if (tbState.imgHidden) contentEl.classList.add('rl-hide-images');
 
-    function persist() { rlSaveSettings(tbState); }
-
     // 创建按钮（带 active 状态管理）
     function makeBtn(label, title, onClick, group) {
       const btn = document.createElement('button');
@@ -291,14 +297,12 @@
       tbState.fontSize = Math.max(14, tbState.fontSize - 2);
       contentEl.style.setProperty('font-size', tbState.fontSize + 'px', 'important');
       fontVal.textContent = tbState.fontSize;
-      persist();
     }));
     fontGroup.appendChild(fontVal);
     fontGroup.appendChild(makeBtn('+', '放大字号', () => {
       tbState.fontSize = Math.min(32, tbState.fontSize + 2);
       contentEl.style.setProperty('font-size', tbState.fontSize + 'px', 'important');
       fontVal.textContent = tbState.fontSize;
-      persist();
     }));
     bar.appendChild(fontGroup);
 
@@ -312,7 +316,6 @@
       const btn = makeBtn(label, '行距 ' + val, () => {
         tbState.lineHeight = val;
         contentEl.style.setProperty('line-height', val, 'important');
-        persist();
       }, lhGroup);
       if (val === tbState.lineHeight) btn.classList.add('rl-tb-active');
       lhGroup.appendChild(btn);
@@ -329,7 +332,6 @@
       const btn = makeBtn(label, val, () => {
         tbState.width = val;
         container.style.setProperty('max-width', val, 'important');
-        persist();
       }, wGroup);
       if (val === tbState.width) btn.classList.add('rl-tb-active');
       wGroup.appendChild(btn);
@@ -346,7 +348,6 @@
       const btn = makeBtn(label, '文本位置 ' + label, () => {
         tbState.position = val;
         container.style.setProperty('margin', val, 'important');
-        persist();
       }, posGroup);
       if (val === tbState.position) btn.classList.add('rl-tb-active');
       posGroup.appendChild(btn);
@@ -362,13 +363,11 @@
     imgGroup.appendChild(makeBtn('−', '缩小图片', () => {
       tbState.imgScale = Math.max(20, tbState.imgScale - 20);
       applyImgScale();
-      persist();
     }));
     imgGroup.appendChild(imgVal);
     imgGroup.appendChild(makeBtn('+', '放大图片', () => {
       tbState.imgScale = Math.min(100, tbState.imgScale + 20);
       applyImgScale();
-      persist();
     }));
 
     const hideBtn = makeBtn('隐', '隐藏/显示图片', (btn) => {
@@ -380,7 +379,6 @@
         contentEl.classList.remove('rl-hide-images');
         btn.classList.remove('rl-tb-active');
       }
-      persist();
     });
     if (tbState.imgHidden) hideBtn.classList.add('rl-tb-active');
     imgGroup.appendChild(hideBtn);
@@ -473,6 +471,10 @@
     state.disabledSheets.forEach((el) => {
       el.disabled = false;
     });
+
+    // 移除阅读模式注入的 CSS
+    const injectedCSS = document.getElementById('reader-lite-injected-css');
+    if (injectedCSS) injectedCSS.remove();
 
     window.scrollTo(0, state.savedScrollY);
 
