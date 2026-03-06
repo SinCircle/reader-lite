@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Reader Lite 一键阅读模式",
+  "version": "1.0.0",
+  "description": "一键隐藏无关内容，提供接近阅读器的简洁阅读体验",
+  "permissions": ["activeTab", "storage"],
+  "action": {
+    "default_title": "切换阅读模式",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,236 @@
+/* Reader Lite - 提取式阅读模式 */
+
+/* 页面整体 */
+.reader-lite-body {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #faf6ef !important;
+  font-family: Georgia, 'Times New Roman', 'Noto Serif SC', '宋体', serif !important;
+  color: #222 !important;
+  min-height: 100vh !important;
+}
+
+/* 浮动工具栏 */
+.rl-toolbar {
+  position: fixed !important;
+  bottom: 24px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 8px 14px !important;
+  background: rgba(255,255,255,0.95) !important;
+  border: 1px solid #d5cbb8 !important;
+  border-radius: 28px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
+  font-family: system-ui, -apple-system, sans-serif !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  opacity: 1;
+  transition: opacity 0.3s ease, transform 0.3s ease !important;
+}
+.rl-toolbar.rl-toolbar-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateX(-50%) translateY(20px) !important;
+}
+.rl-toolbar.rl-toolbar-visible {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateX(-50%) translateY(0) !important;
+}
+
+.rl-tb-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  padding: 0 6px !important;
+  border-right: 1px solid #e0d8c8 !important;
+}
+.rl-tb-group:last-child {
+  border-right: none !important;
+}
+
+.rl-tb-label {
+  font-size: 11px !important;
+  color: #999 !important;
+  margin-right: 4px !important;
+  white-space: nowrap !important;
+  user-select: none !important;
+}
+
+.rl-tb-btn {
+  padding: 4px 10px !important;
+  border: none !important;
+  border-radius: 14px !important;
+  background: transparent !important;
+  color: #555 !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: background 0.12s, color 0.12s !important;
+  font-family: system-ui, -apple-system, sans-serif !important;
+  line-height: 1.4 !important;
+}
+.rl-tb-btn:hover {
+  background: #3a7c4a !important;
+  color: #fff !important;
+}
+.rl-tb-btn.rl-tb-active {
+  background: #3a7c4a !important;
+  color: #fff !important;
+}
+
+.rl-tb-val {
+  font-size: 12px !important;
+  color: #333 !important;
+  min-width: 24px !important;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums !important;
+  user-select: none !important;
+}
+
+/* 隐藏图片模式 */
+.rl-content.rl-hide-images img {
+  display: none !important;
+}
+
+/* 内容容器 */
+.rl-container {
+  max-width: 920px !important;
+  margin: 0 auto !important;
+  padding: 60px 32px 100px !important;
+}
+
+/* 标题 */
+.rl-title {
+  font-size: 30px !important;
+  font-weight: bold !important;
+  line-height: 1.4 !important;
+  color: #111 !important;
+  margin: 0 0 32px 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* 正文 */
+.rl-content {
+  font-size: 19px !important;
+  line-height: 1.9 !important;
+  color: #333 !important;
+  word-break: break-word !important;
+}
+
+/* 段落与列表 */
+.rl-content p {
+  margin: 0 0 1em 0 !important;
+}
+.rl-content li {
+  margin-bottom: 0.5em !important;
+}
+.rl-content ul,
+.rl-content ol {
+  padding-left: 1.5em !important;
+  margin-bottom: 1em !important;
+}
+
+/* 标题 */
+.rl-content h1,
+.rl-content h2,
+.rl-content h3,
+.rl-content h4,
+.rl-content h5 {
+  color: #111 !important;
+  line-height: 1.35 !important;
+  margin: 1.6em 0 0.6em 0 !important;
+  font-weight: bold !important;
+}
+.rl-content h1 { font-size: 26px !important; }
+.rl-content h2 { font-size: 23px !important; }
+.rl-content h3 { font-size: 20px !important; }
+
+/* 图片/视频 */
+.rl-content img,
+.rl-content video {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  margin: 1em auto !important;
+  border-radius: 4px !important;
+}
+.rl-content figure {
+  margin: 1em 0 !important;
+  padding: 0 !important;
+}
+.rl-content figcaption {
+  text-align: center !important;
+  font-size: 0.85em !important;
+  color: #888 !important;
+  margin-top: 6px !important;
+}
+
+/* 链接 */
+.rl-content a {
+  color: #1a6bb5 !important;
+  text-decoration: underline !important;
+}
+.rl-content a:hover {
+  color: #0d4e8a !important;
+}
+
+/* 引用块 */
+.rl-content blockquote {
+  margin: 1em 0 !important;
+  padding: 0.6em 1.2em !important;
+  border-left: 4px solid #c8bfa0 !important;
+  background: rgba(0,0,0,0.03) !important;
+  color: #555 !important;
+  font-style: italic !important;
+}
+
+/* 代码 */
+.rl-content code {
+  font-family: Consolas, 'Courier New', monospace !important;
+  font-size: 0.88em !important;
+  background: #eee8dc !important;
+  border-radius: 3px !important;
+  padding: 0.15em 0.4em !important;
+}
+.rl-content pre {
+  background: #eee8dc !important;
+  border-radius: 6px !important;
+  padding: 14px 18px !important;
+  overflow-x: auto !important;
+  margin: 1em 0 !important;
+  line-height: 1.5 !important;
+}
+.rl-content pre code {
+  background: none !important;
+  padding: 0 !important;
+}
+
+/* 分割线 */
+.rl-content hr {
+  border: none !important;
+  border-top: 1px solid #d5cbb8 !important;
+  margin: 2em 0 !important;
+}
+
+/* 表格 */
+.rl-content table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+  margin: 1em 0 !important;
+}
+.rl-content th,
+.rl-content td {
+  border: 1px solid #d5cbb8 !important;
+  padding: 8px 12px !important;
+  text-align: left !important;
+}
+.rl-content th {
+  background: rgba(0,0,0,0.04) !important;
+  font-weight: bold !important;
+}
