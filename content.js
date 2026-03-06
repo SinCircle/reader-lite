@@ -106,11 +106,62 @@
       'nav', 'aside', 'footer', 'header',
       '[role="navigation"]', '[role="banner"]', '[role="complementary"]',
       '[role="contentinfo"]', '[aria-hidden="true"]',
-      '.ad, .ads, .advert, .advertisement',
-      '.sidebar, .side-bar',
-      '.social-share, .share-buttons',
-      '.related-posts, .recommended',
-      '.comments, .comment-section, #comments',
+      'button', '[role="button"]',
+      'form', 'input', 'select', 'textarea',
+      // 广告
+      '.ad', '.ads', '.advert', '.advertisement', '.ad-unit',
+      '.dfp-leaderboard-container', '[class*="ad-placement"]',
+      '[class*="sponsored"]',
+      // 侧栏 / 导航
+      '.sidebar', '.side-bar', '[class*="sidebar"]',
+      // 社交分享 / 作者社交
+      '.social-share', '.share-buttons',
+      '.byline-social', '.button-social-group', '.button-social',
+      '[class*="social-buttons"]', '[class*="button-social"]',
+      '[class*="share-"]', '[aria-label*="Share"]',
+      // 评论区（含第三方 Viafoura 等）
+      '.comments', '.comment-section', '#comments',
+      '.all-comments-container', '.all-comments',
+      '[class*="viafoura"]', 'vf-widget', '[class*="vf-"]', '[class*="vf3-"]',
+      // 推荐 / 相关 / 热门
+      '.related-posts', '.recommended', '.related-articles-block',
+      '.popular-box', '[class*="trending"]',
+      '.carousel-showcase',
+      // 无限滚动 / 信息流
+      '.infinite-container', '.infinite-trigger',
+      // 面包屑 / 跳转导航
+      '.breadcrumb', '[class*="jump-to"]',
+      // Cookie 同意 / 隐私弹窗
+      '[class*="cky-consent"]', '[class*="cky-"]',
+      '[class*="osano-cm"]', '[class*="cookie"]',
+      '[class*="consent-bar"]', '[class*="privacy-consent"]',
+      // 署名 / 作者元信息（通常出现在正文前后）
+      '.byline', '[class*="byline"]',
+      '[class*="author__"]', '[class*="author-bio"]',
+      // 文章元信息（类型标签、日期栏、分享栏）
+      '[class*="article-meta"]', '[class*="article-type"]',
+      '.strapline',
+      '[class*="affiliate-disclaimer"]',
+      // 目录跳转
+      '.contents[data-only-inline]', '[data-component-name="Article:JumpTo"]',
+      // Newsletter 注册
+      '[class*="newsletter"]',
+      // 工具栏 / 操作栏
+      '[class*="utility-bar"]', '[class*="toolbar"]',
+      // 系列导航 / 前后文章
+      '[class*="series-nav"]',
+      // 评论按钮 / 书签按钮 / 收藏
+      '[class*="comments-button"]', '[class*="bookmark-button"]',
+      '[class*="favorite"]',
+      // Tooltip / 屏幕阅读器专用文本
+      '[role="tooltip"]', '[class*="tooltip"]',
+      '.screen-reader-text', '.sr-only', '[class*="screen-reader"]',
+      // 进度条 / 导航条
+      '[class*="progress-bar"]', '[class*="nav__local"]',
+      // 文章标题区的元数据（分享、摘要、操作栏）
+      '[class*="post__title__actions"]', '[class*="post__title__meta"]',
+      '[class*="post__title__kicker"]', '[class*="post__title__series"]',
+      '[class*="post__title__author"]', '[class*="post__title__excerpt"]',
     ];
 
     removeSelectors.forEach((sel) => {
@@ -127,6 +178,44 @@
       }
     });
 
+    // 移除过小的图标图片（宽或高 ≤ 48px 视为图标）
+    clone.querySelectorAll('img').forEach((img) => {
+      const w = img.naturalWidth || parseInt(img.getAttribute('width'), 10) || 0;
+      const h = img.naturalHeight || parseInt(img.getAttribute('height'), 10) || 0;
+      if ((w > 0 && w <= 48) || (h > 0 && h <= 48)) {
+        img.remove();
+      }
+    });
+
+    // 移除社交媒体按钮 / 图标链接（只含小图标、无正文文本的 <a>）
+    const socialPattern = /facebook|twitter|weibo|wechat|whatsapp|telegram|linkedin|pinterest|instagram|tiktok|reddit|share|social|icon/i;
+    clone.querySelectorAll('a').forEach((a) => {
+      const text = a.textContent.trim();
+      const href = a.getAttribute('href') || '';
+      const innerImg = a.querySelector('img');
+      const innerSvg = a.querySelector('svg');
+
+      // 链接仅包含 SVG 图标无文字 → 移除
+      if (innerSvg && !innerImg && text.length <= 2) { a.remove(); return; }
+
+      // 链接包含 <img> 无文字 → 仅移除确认是小图标的情况
+      if (innerImg && text.length <= 2) {
+        const iw = innerImg.naturalWidth || parseInt(innerImg.getAttribute('width'), 10) || 0;
+        const ih = innerImg.naturalHeight || parseInt(innerImg.getAttribute('height'), 10) || 0;
+        const isSmallIcon = (iw > 0 && iw <= 48) || (ih > 0 && ih <= 48);
+        if (isSmallIcon) { a.remove(); return; }
+        // 尺寸未知或大图 → 保留（内容图片链接）
+      }
+
+      // href 或残留 class 匹配社交平台关键字且文本极短
+      if (socialPattern.test(href + ' ' + (a.getAttribute('class') || '')) && text.length <= 6) {
+        a.remove();
+      }
+    });
+
+    // 移除所有 SVG（正文中的 SVG 几乎都是图标 / UI 装饰，不是内容图片）
+    clone.querySelectorAll('svg').forEach((svg) => svg.remove());
+
     // 清除所有内联 style、class（使内容只受我们的 CSS 控制）
     clone.querySelectorAll('*').forEach((el) => {
       el.removeAttribute('style');
@@ -137,7 +226,85 @@
     clone.removeAttribute('class');
     clone.removeAttribute('id');
 
+    // 移除空行 / 无内容元素（从内到外，避免嵌套空壳残留）
+    const emptyTags = new Set(['P','DIV','SPAN','LI','UL','OL','BLOCKQUOTE','SECTION','FIGURE','A']);
+    let removed;
+    do {
+      removed = false;
+      clone.querySelectorAll('*').forEach((el) => {
+        if (!emptyTags.has(el.tagName)) return;
+        if (!el.textContent.trim() && !el.querySelector('img,video,iframe,canvas,svg,audio')) {
+          el.remove();
+          removed = true;
+        }
+      });
+    } while (removed);
+
+    // 清理纯空白文本节点产生的连续 <br>
+    clone.querySelectorAll('br + br').forEach((br) => br.remove());
+
+    // 修剪开头的非正文碎片：若首部元素文本极短且不含媒体，逐个移除
+    trimLeadingJunk(clone);
+
     return clone;
+  }
+
+  /**
+   * 移除容器开头的短碎片节点（如残留的标签文本、日期行等）。
+   * 只在遇到有实质内容的段落或含媒体的块时停止。
+   */
+  function trimLeadingJunk(el) {
+    const MIN_PAR = 60;  // <p> 文本长度阈值
+    while (el.firstChild) {
+      const node = el.firstChild;
+      // 空白文本节点 → 移除
+      if (node.nodeType === Node.TEXT_NODE) {
+        if (!node.textContent.trim()) { node.remove(); continue; }
+        // 独立非空文本 → 仅保留足够长的
+        if (node.textContent.trim().length >= MIN_PAR) break;
+        node.remove(); continue;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) { node.remove(); continue; }
+      const tag = node.tagName;
+      // <p> 含足够长文本 → 正文开始
+      if (tag === 'P' && (node.textContent || '').trim().length >= MIN_PAR) break;
+      // 含媒体的块 → 正文开始
+      if (node.querySelector('img,video,iframe,canvas,audio')) break;
+      // <h1>-<h6> → 如果下一个兄弟是有实质内容的 <p> 则保留，否则碎片
+      if (/^H[1-6]$/.test(tag)) {
+        const next = nextMeaningfulSibling(node);
+        if (next && next.tagName === 'P' && (next.textContent || '').trim().length >= MIN_PAR) break;
+        if (next && next.querySelector && next.querySelector('img,video,iframe,canvas,audio')) break;
+        // 孤立标题（后面没跟长段落）→ 碎片，移除
+        node.remove(); continue;
+      }
+      // <blockquote>/<pre>/<table> → 实质内容
+      if (/^(BLOCKQUOTE|PRE|TABLE|DL)$/.test(tag)) break;
+      // 其余元素（div/span/section/ul/ol/li/a 等）：文本短 → 碎片
+      if ((node.textContent || '').trim().length < MIN_PAR) {
+        node.remove(); continue;
+      }
+      // 文本长但内部有 <p> → 可能是包裹层，递归修剪
+      if (node.querySelector('p')) {
+        trimLeadingJunk(node);
+        // 修剪后若变空则移除
+        if (!node.textContent.trim() && !node.querySelector('img,video,iframe,canvas,audio')) {
+          node.remove(); continue;
+        }
+      }
+      break;
+    }
+  }
+
+  /** 跳过空白文本，找到下一个有意义的兄弟元素 */
+  function nextMeaningfulSibling(node) {
+    let sib = node.nextSibling;
+    while (sib) {
+      if (sib.nodeType === Node.ELEMENT_NODE) return sib;
+      if (sib.nodeType === Node.TEXT_NODE && sib.textContent.trim()) return sib;
+      sib = sib.nextSibling;
+    }
+    return null;
   }
 
   /* =====================
@@ -444,14 +611,17 @@
 
     // 自动隐藏：鼠标远离底部时淡出，靠近时淡入
     let hideTimer = null;
-    const showBar = () => {
-      bar.classList.add('rl-toolbar-visible');
-      bar.classList.remove('rl-toolbar-hidden');
+    const scheduleHide = (delay) => {
       clearTimeout(hideTimer);
       hideTimer = setTimeout(() => {
         bar.classList.remove('rl-toolbar-visible');
         bar.classList.add('rl-toolbar-hidden');
-      }, 2500);
+      }, delay);
+    };
+    const showBar = (delay = 5000) => {
+      bar.classList.add('rl-toolbar-visible');
+      bar.classList.remove('rl-toolbar-hidden');
+      scheduleHide(delay);
     };
 
     // 鼠标进入工具栏时保持可见
@@ -461,25 +631,19 @@
       bar.classList.remove('rl-toolbar-hidden');
     });
     bar.addEventListener('mouseleave', () => {
-      hideTimer = setTimeout(() => {
-        bar.classList.remove('rl-toolbar-visible');
-        bar.classList.add('rl-toolbar-hidden');
-      }, 1500);
+      scheduleHide(3000);
     });
 
-    // 鼠标靠近屏幕底部 120px 范围时显示
+    // 鼠标靠近屏幕底部 150px 范围时显示
     document.addEventListener('mousemove', (e) => {
-      if (e.clientY > window.innerHeight - 120) {
-        showBar();
+      if (e.clientY > window.innerHeight - 150) {
+        showBar(5000);
       }
     });
 
-    // 初始显示 3 秒后自动隐藏
+    // 初始显示 5 秒后自动隐藏
     bar.classList.add('rl-toolbar-visible');
-    hideTimer = setTimeout(() => {
-      bar.classList.remove('rl-toolbar-visible');
-      bar.classList.add('rl-toolbar-hidden');
-    }, 3000);
+    scheduleHide(5000);
 
     return bar;
   }
