@@ -141,6 +141,56 @@
   }
 
   /* =====================
+     连续图片并排显示
+     ===================== */
+  function isImageNode(node) {
+    if (node.nodeType !== Node.ELEMENT_NODE) return false;
+    const tag = node.tagName;
+    if (tag === 'IMG') return true;
+    if (tag === 'FIGURE' && node.querySelector('img')) return true;
+    // <p> / <div> / <span> 等：只要内部有效内容全是 img（或包含 img 的 <a>），就算图片节点
+    const meaningful = Array.from(node.childNodes).filter(
+      n => !(n.nodeType === Node.TEXT_NODE && !n.textContent.trim())
+    );
+    if (meaningful.length === 0) return false;
+    return meaningful.every(n => {
+      if (n.nodeType !== Node.ELEMENT_NODE) return false;
+      if (n.tagName === 'IMG') return true;
+      if (n.tagName === 'A' && n.querySelector('img')) return true;
+      // 递归：包裹层只含图片的也算
+      return isImageNode(n);
+    });
+  }
+
+  function groupConsecutiveImages(el) {
+    // 先递归处理所有子元素（深度优先，从最内层开始分组）
+    Array.from(el.children).forEach(child => groupConsecutiveImages(child));
+
+    // 再在当前层级寻找连续图片并分组
+    const flush = (run) => {
+      if (run.length < 2) return;
+      const row = document.createElement('div');
+      row.className = 'rl-img-row';
+      run[0].parentNode.insertBefore(row, run[0]);
+      run.forEach(n => row.appendChild(n));
+    };
+
+    const children = Array.from(el.childNodes);
+    let imgRun = [];
+
+    for (const node of children) {
+      if (node.nodeType === Node.TEXT_NODE && !node.textContent.trim()) continue;
+      if (isImageNode(node)) {
+        imgRun.push(node);
+      } else {
+        flush(imgRun);
+        imgRun = [];
+      }
+    }
+    flush(imgRun);
+  }
+
+  /* =====================
      进入阅读模式
      ===================== */
   function enterReaderMode() {
@@ -210,6 +260,7 @@
     while (cloned.firstChild) {
       contentEl.appendChild(cloned.firstChild);
     }
+    groupConsecutiveImages(contentEl);
     container.appendChild(contentEl);
 
     const toolbar = buildToolbar(container, contentEl, settings);

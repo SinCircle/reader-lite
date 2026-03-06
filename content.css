@@ -158,7 +158,7 @@
   height: auto !important;
   display: block !important;
   margin: 1em auto !important;
-  border-radius: 4px !important;
+  border-radius: 12px !important;
 }
 .rl-content figure {
   margin: 1em 0 !important;
@@ -169,6 +169,34 @@
   font-size: 0.85em !important;
   color: #888 !important;
   margin-top: 6px !important;
+}
+
+/* 连续图片并排 */
+.rl-content .rl-img-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  align-items: flex-start !important;
+  margin: 1em 0 !important;
+}
+.rl-content .rl-img-row img {
+  flex: 1 1 0 !important;
+  min-width: 150px !important;
+  max-width: 100% !important;
+  height: auto !important;
+  margin: 0 !important;
+  object-fit: contain !important;
+}
+.rl-content .rl-img-row figure,
+.rl-content .rl-img-row p {
+  flex: 1 1 0 !important;
+  min-width: 150px !important;
+  margin: 0 !important;
+}
+.rl-content .rl-img-row figure img,
+.rl-content .rl-img-row p img {
+  width: 100% !important;
+  min-width: 0 !important;
 }
 
 /* 链接 */
